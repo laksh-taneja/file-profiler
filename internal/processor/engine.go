@@ -10,10 +10,33 @@ import (
 	"strings"
 )
 
-func Analyze(f FileDimension) (*FileResult, error) {
-	log.Printf("Processing file %v", f.Filename)
+func processStream(reader io.Reader, f FileDimension) (int, int, error) {
+	var lines, words int
+	scanner := bufio.NewScanner(reader)
+	if f.LongLines {
+		const maxCapacity = 10 * 1024 * 1024
+		buf := make([]byte, 1024*1024)
+		scanner.Buffer(buf, maxCapacity)
+	}
+	for scanner.Scan() {
+		if f.CountLines {
+			lines++
+		}
+		if f.CountWords {
+			lineText := scanner.Text()
+			words += len(strings.Fields(lineText))
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, 0, err
+	}
+	return lines, words, nil
+}
 
-	file, err := os.Open(f.Filename)
+func Analyze(fd FileDimension) (*FileResult, error) {
+	log.Printf("Processing file %v", fd.Filename)
+
+	file, err := os.Open(fd.Filename)
 	if err != nil {
 		return nil, err
 	}
@@ -26,32 +49,15 @@ func Analyze(f FileDimension) (*FileResult, error) {
 	hasher := sha256.New()
 	var reader io.Reader = file
 
-	if f.DoHash {
+	if fd.DoHash {
 		reader = io.TeeReader(file, hasher)
 	}
-	if f.CountLines || f.CountWords {
-		scanner := bufio.NewScanner(reader)
-		if f.LongLines {
-			const maxCapacity = 10 * 1024 * 1024
-			buf := make([]byte, 1024*1024)
-			scanner.Buffer(buf, maxCapacity)
-		}
-		for scanner.Scan() {
-			if f.CountLines {
-				lines++
-			}
-			if f.CountWords {
-				lineText := scanner.Text()
-				words += len(strings.Fields(lineText))
-			}
-		}
-		if err = scanner.Err(); err != nil {
-			return nil, err
-		}
-	} else if f.DoHash {
+	if fd.CountLines || fd.CountWords {
+		lines, words, err = processStream(reader, fd)
+	} else if fd.DoHash {
 		io.Copy(io.Discard, reader)
 	}
-	if f.DoHash {
+	if fd.DoHash {
 		checksum = hex.EncodeToString(hasher.Sum(nil))
 	}
 
