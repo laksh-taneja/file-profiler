@@ -55,11 +55,11 @@ func Analyze(fd FileDimension) (*FileResult, error) {
 	if fd.CountLines || fd.CountWords {
 		lines, words, err = processStream(reader, fd)
 	} else if fd.DoHash {
-		io.Copy(io.Discard, reader)
+		_, err = io.Copy(io.Discard, reader)
 	}
 	if fd.DoHash {
 		checksum = hex.EncodeToString(hasher.Sum(nil))
 	}
 
-	return &FileResult{WordCount: words, LineCount: lines, CheckSum: checksum}, nil
+	return &FileResult{Filename: fd.Filename, WordCount: words, LineCount: lines, CheckSum: checksum}, err
 }
