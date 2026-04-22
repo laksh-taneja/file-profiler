@@ -5,9 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"log"
 	"os"
 	"strings"
+
+	"github.com/laksh-taneja/file-profiler/internal/utils"
 )
 
 func processStream(reader io.Reader, f FileDimension) (int, int, error) {
@@ -34,8 +35,10 @@ func processStream(reader io.Reader, f FileDimension) (int, int, error) {
 }
 
 func Analyze(fd FileDimension) (*FileResult, error) {
-	log.Printf("Processing file %v", fd.Filename)
-
+	_, err := utils.FileExists(fd.Filename)
+	if err != nil {
+		return nil, err
+	}
 	file, err := os.Open(fd.Filename)
 	if err != nil {
 		return nil, err
