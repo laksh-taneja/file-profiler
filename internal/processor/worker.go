@@ -15,7 +15,7 @@ func StartPool(workerCount int) (chan FileDimension, chan *FileResult) {
 			for job := range jobs {
 				res, err := Analyze(job)
 				if err != nil {
-					log.Printf("Error %v: %v\n", res.Filename, err)
+					log.Printf("\nError %v: %v\n", job.Filename, err)
 					continue
 				}
 				results <- res
